@@ -29,7 +29,7 @@ const App = () => {
     setFormUpdate({ ...formupdate, [key]: value });
   }
 
-  async function fetchTodos() {
+  const fetchTodos = async() => {
     try {
       const todoData = await client.graphql({
         query: listTodos
@@ -100,49 +100,57 @@ const App = () => {
   }, [])
 
   useEffect(() => {
+    console.log('awal', todos.length);
+    
     const createSub = client
       .graphql({ query: subscriptions.onCreateTodo })
       .subscribe({
         next: ({ data }) => {
           console.log(todos);
-          console.log(data.onCreateTodo);
-          
-          setTodos([...todos, data.onCreateTodo])
-        },
-        error: (error) => console.warn(error)
-      });
-
-    const updateSub = client
-      .graphql({ query: subscriptions.onUpdateTodo })
-      .subscribe({
-        next: ({ data }) => {
-          const todoIndex = todos.findIndex((item) => item.id === data.onUpdateTodo.id);
-          todos[todoIndex].name = data.onUpdateTodo.name;
-          todos[todoIndex].description = data.onUpdateTodo.description;
-          todos[todoIndex].updatedAt = data.onUpdateTodo.updatedAt;
-          setTodos([...todos])
-        },
-        error: (error) => console.warn(error)
-      });
-
-    const deleteSub = client
-      .graphql({ query: subscriptions.onDeleteTodo })
-      .subscribe({
-        next: ({ data }) => {
           console.log(data);
-          const todoIndex = todos.findIndex((item) => item.id === data.onDeleteTodo.id);
-          console.log(todoIndex);
-          todos.splice(todoIndex, 1);
-          setTodos([...todos])
+          if (data.onCreateTodo) setTodos([...todos, data.onCreateTodo]);
         },
         error: (error) => console.warn(error)
       });
+  
+      const updateSub = client
+        .graphql({ query: subscriptions.onUpdateTodo })
+        .subscribe({
+          next: ({ data }) => {
+            console.log(data);
+            if (data.onUpdateTodo) {
+              const todoIndex = todos.findIndex((item) => item.id === data.onUpdateTodo.id);
+              todos[todoIndex].name = data.onUpdateTodo.name;
+              todos[todoIndex].description = data.onUpdateTodo.description;
+              todos[todoIndex].updatedAt = data.onUpdateTodo.updatedAt;
+              setTodos([...todos])
+            }
+          },
+          error: (error) => console.warn(error)
+        });
+  
+      const deleteSub = client
+        .graphql({ query: subscriptions.onDeleteTodo })
+        .subscribe({
+          next: ({ data }) => {
+            if (data) {
+              console.log(data);
+              if(data.onDeleteTodo) {
+                const todoIndex = todos.findIndex((item) => item.id === data.onDeleteTodo.id);
+                todos.splice(todoIndex, 1);
+                setTodos([...todos])
+              }
+            }
+          },
+          error: (error) => console.warn(error)
+        });
+
     return () => {
       createSub.unsubscribe();
       updateSub.unsubscribe();
       deleteSub.unsubscribe();
     };
-  }, []);
+  }, [todos]);
 
   return (
     <div className='container'>
